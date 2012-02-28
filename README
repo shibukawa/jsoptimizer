@@ -1,0 +1,17 @@
+JSOptimizer
+===========
+
+This is research project.
+
+* Create JS tokenizer from JSHint
+* User tokenizer for optimization
+
+Author
+======
+
+Yoshiki Shibukawa
+
+License
+=======
+
+MIT/X License
