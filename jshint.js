@@ -1103,6 +1103,8 @@ var JSHINT = (function () {
         // Public lex methods
         return {
             init: function (source) {
+                all_tokens.splice(0, all_tokens.length);
+                jsdoc_comments.splice(0, jsdoc_comments.length);
                 if (typeof source === 'string') {
                     lines = source
                         .replace(/\r\n/g, '\n')

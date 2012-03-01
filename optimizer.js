@@ -3,9 +3,10 @@ var jshint = require('./jshint').JSHINT;
 
 
 var Optimizer = function() {
+    var errors = [];
     function init()
     {
-        errors = [];
+        errors.splice(0, errors.length);
     }
 
     var JsdocTypes = {
@@ -148,7 +149,42 @@ var Optimizer = function() {
                         }
                         else if (token2.value === variable_name && token2.identifier && !skip)
                         {
-                            token2.value = variable_value;
+                            var error = false;
+                            switch (tokens[index + 1].value)
+                            {
+                            case "=":
+                            case "+=":
+                            case "-=":
+                            case "*=":
+                            case "/=":
+                            case "%=":
+                            case "&=":
+                            case "|=":
+                            case "^=":
+                            case "<<=":
+                            case ">>=":
+                            case ">>>=":
+                            case "++":
+                            case "--":
+                                error = true;
+                                break;
+                            default:
+                                switch (tokens[index - 1].value)
+                                {
+                                case "++":
+                                case "--":
+                                    error = true;
+                                    break;
+                                }
+                            }
+                            if (error)
+                            {
+                                errors.push("line " + token2.line + ": const variable '" + variable_name + "' is modified.");
+                            }
+                            else
+                            {
+                                token2.value = variable_value;
+                            }
                         }
                         skip = (token2.value === ".");
                         index++;
@@ -161,7 +197,6 @@ var Optimizer = function() {
     
     var generate = function (tokens)
     {
-        console.log("generate:");
         result = [];
         var last_is_identifier = false;
         for (var i = 0; i < tokens.length; i++)
@@ -178,38 +213,35 @@ var Optimizer = function() {
                 last_is_identifier = is_identifier;
             }
         }
-        console.log(result.join(""));
+        return result.join("");
     };
 
-    this.optimize = function (data)
+    this.optimize = function (path)
     {
-        jshint(data);
-        var tokens = jshint.tokens();
-        var jsdocs = jshint.jsdocs();
-        optimize_with_jsdoc(tokens, jsdocs);
-        console.log(jsdocs);
-        generate(tokens);
+        var result = {
+            isOk: false
+        };
+        data = fs.readFileSync(path, "utf-8");
+        if (jshint(data)) {
+            var tokens = jshint.tokens();
+            var jsdocs = jshint.jsdocs();
+            optimize_with_jsdoc(tokens, jsdocs);
+            console.log(jsdocs);
+            console.log(errors);
+            if (errors.length === 0)
+            {
+                result.output = generate(tokens);
+                result.isOk = true;
+            }
+            else
+            {
+                result.errors = errors.slice();
+            }
+        }
+        return result;
     };
 
     init.call(this);
 };
 
-
-function main(path)
-{
-    fs.readFile(path, "utf-8", function (err, data) {
-        if (err) throw err;
-        optimizer = new Optimizer;
-        optimizer.optimize(data);
-    });
-}
-
-if (process.argv.length !== 3)
-{
-    console.log("usage:");
-    console.log("    node optimize.js [javascript-source-path]");
-}
-else
-{
-    main(process.argv[2]);
-}
+exports.Optimizer = Optimizer;
